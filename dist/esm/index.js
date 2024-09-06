@@ -1,5 +1,15 @@
 import * as MQTTPattern from "mqtt-pattern";
 import mqtt from "mqtt";
+var connectionParameters = /** @class */ (function () {
+    function connectionParameters(protocol, username, password, host, port) {
+        this.protocol = protocol;
+        this.username = username;
+        this.password = password;
+        this.host = host;
+        this.port = port;
+    }
+    return connectionParameters;
+}());
 var easymqtt = new /** @class */ (function () {
     function class_1() {
         this.handlers = [];
@@ -20,10 +30,38 @@ var easymqtt = new /** @class */ (function () {
             }
         });
     };
+    class_1.prototype.parseConnectionUrl = function (urlString) {
+        try {
+            var urlRegex = /^(\w+):\/\/(?:([^:@]+)(?::([^:@]+))?@)?([^:@]+):(\d+)$/;
+            var match = urlRegex.exec(urlString);
+            if (!match) {
+                throw new Error("Invalid connection URL: ".concat(urlString, "\nExpected format: protocol://username:password@host:port"));
+            }
+            var protocol = match[1];
+            var username = match[2];
+            var password = match[3];
+            var host = match[4];
+            var port = parseInt(match[5]);
+            var connection = new connectionParameters(protocol, username, password, host, port);
+            return connection;
+        }
+        catch (err) {
+            console.error(err);
+            throw new Error(err);
+        }
+    };
     class_1.prototype.connect = function (options) {
         var _this = this;
         if (this.initialized) {
             return;
+        }
+        if (options.url) {
+            var connection = this.parseConnectionUrl(options.url);
+            options.protocol = connection.protocol;
+            options.username = connection.username;
+            options.password = connection.password;
+            options.host = connection.host;
+            options.port = connection.port;
         }
         this._client = mqtt.connect(options);
         this.client.on('connect', function () {
